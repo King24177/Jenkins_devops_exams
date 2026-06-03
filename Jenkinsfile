@@ -1,95 +1,55 @@
-pipeline {
-    agent any
+version: '3.7'
 
-    environment {
-        DOCKER_ID = "king241"
-        DOCKER_IMAGE_CAST = "cast-service"
-        DOCKER_IMAGE_MOVIE = "movie-service"
-        DOCKER_TAG = "v.${BUILD_ID}.0"
-        DOCKER_PASS = credentials('DOCKER_HUB_PASS')
-    }
+services:
+  movie_service:
+    image: ${MOVIE_IMAGE:-king24177/movie-service:latest}
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    ports:
+      - 8001:8000
+    environment:
+      - DATABASE_URI=postgresql://movie_db_username:movie_db_password@movie_db/movie_db_dev
+      - CAST_SERVICE_HOST_URL=http://cast_service:8000/api/v1/casts/
+    depends_on:
+      - movie_db
 
-    stages {
+  movie_db:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_movie:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=movie_db_username
+      - POSTGRES_PASSWORD=movie_db_password
+      - POSTGRES_DB=movie_db_dev
 
-        stage('Build Cast Service') {
-            steps {
-                sh '''
-                    docker build -t $DOCKER_ID/$DOCKER_IMAGE_CAST:$DOCKER_TAG ./cast-service
-                '''
-            }
-        }
+  cast_service:
+    image: ${CAST_IMAGE:-king24177/cast-service:latest}
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    ports:
+      - 8002:8000
+    environment:
+      - DATABASE_URI=postgresql://cast_db_username:cast_db_password@cast_db/cast_db_dev
+    depends_on:
+      - cast_db
 
-        stage('Build Movie Service') {
-            steps {
-                sh '''
-                    docker build -t $DOCKER_ID/$DOCKER_IMAGE_MOVIE:$DOCKER_TAG ./movie-service
-                '''
-            }
-        }
+  cast_db:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_cast:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=cast_db_username
+      - POSTGRES_PASSWORD=cast_db_password
+      - POSTGRES_DB=cast_db_dev
 
-        stage('Test Cast Service') {
-            steps {
-                sh '''
-                    docker run --rm $DOCKER_ID/$DOCKER_IMAGE_CAST:$DOCKER_TAG python -m pytest || true
-                '''
-            }
-        }
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx_config.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - cast_service
+      - movie_service
 
-        stage('Test Movie Service') {
-            steps {
-                sh '''
-                    docker run --rm $DOCKER_ID/$DOCKER_IMAGE_MOVIE:$DOCKER_TAG python -m pytest || true
-                '''
-            }
-        }
-
-        stage('Push to DockerHub') {
-            steps {
-                sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_ID --password-stdin
-                    docker push $DOCKER_ID/$DOCKER_IMAGE_CAST:$DOCKER_TAG
-                    docker push $DOCKER_ID/$DOCKER_IMAGE_MOVIE:$DOCKER_TAG
-                '''
-            }
-        }
-
-        stage('Deploy with Docker Compose') {
-            steps {
-                sh '''
-                    # Mettre à jour les tags dans docker-compose
-                    sed -i "s|cast-service:.*|cast-service:$DOCKER_TAG|g" docker-compose.yml
-                    sed -i "s|movie-service:.*|movie-service:$DOCKER_TAG|g" docker-compose.yml
-                    
-                    docker-compose down || true
-                    docker-compose up -d
-                    docker-compose ps
-                '''
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                sh '''
-                    sleep 10
-                    curl -f http://localhost:8080/api/v1/movies/docs || echo "Movie service not ready"
-                    curl -f http://localhost:8080/api/v1/casts/docs || echo "Cast service not ready"
-                '''
-            }
-        }
-    }
-
-    post {
-        success {
-            echo '✅ Pipeline terminé avec succès!'
-            echo "Images pushées: $DOCKER_ID/$DOCKER_IMAGE_CAST:$DOCKER_TAG"
-            echo "Images pushées: $DOCKER_ID/$DOCKER_IMAGE_MOVIE:$DOCKER_TAG"
-        }
-        failure {
-            echo '❌ Pipeline échoué!'
-            sh 'docker-compose logs || true'
-        }
-        always {
-            sh 'docker logout || true'
-        }
-    }
-}
+volumes:
+  postgres_data_movie:
+  postgres_data_cast:
