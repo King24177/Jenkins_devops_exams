@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_ID = "king24177"
+        DOCKER_ID = "king241"
         DOCKER_IMAGE_CAST = "cast-service"
         DOCKER_IMAGE_MOVIE = "movie-service"
         DOCKER_TAG = "v.${BUILD_ID}.0"
