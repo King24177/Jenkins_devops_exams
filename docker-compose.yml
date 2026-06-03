@@ -3,7 +3,7 @@ version: '3.7'
 services:
   movie_service:
     image: king241/movie-service:latest
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
     ports:
       - 8001:8000
     environment:
@@ -23,7 +23,7 @@ services:
 
   cast_service:
     image: king241/cast-service:latest
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
     ports:
       - 8002:8000
     environment:
