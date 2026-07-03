@@ -1,18 +1,19 @@
 pipeline {
     environment {
-        DOCKER_ID      = "king241"
-        DOCKER_MOVIE   = "movie-service"
-        DOCKER_CAST    = "cast-service"
-        DOCKER_TAG     = "v.${BUILD_ID}.0"
+        DOCKER_ID    = "king241"
+        DOCKER_MOVIE = "movie-service"
+        DOCKER_CAST  = "cast-service"
+        DOCKER_TAG   = "v.${BUILD_ID}.0"
     }
     agent any
+
     stages {
 
         stage('Docker Build') {
             steps {
                 script {
                     sh '''
-                        docker rm -f jenkins || true
+                        docker rm -f movie-service cast-service || true
                         docker build -t $DOCKER_ID/$DOCKER_MOVIE:$DOCKER_TAG ./movie-service
                         docker build -t $DOCKER_ID/$DOCKER_CAST:$DOCKER_TAG ./cast-service
                         sleep 6
@@ -37,8 +38,8 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        curl -s localhost:8001 || echo "movie-service reachable"
-                        curl -s localhost:8002 || echo "cast-service reachable"
+                        curl -sf localhost:8001/api/v1/checkapi || echo "movie-service OK"
+                        curl -sf localhost:8002/api/v1/checkapi || echo "cast-service OK"
                     '''
                 }
             }
@@ -66,14 +67,17 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        rm -Rf .kube
-                        mkdir .kube
+                        rm -Rf .kube && mkdir .kube
                         cat $KUBECONFIG > .kube/config
+                        # Deploy movie-service
                         cp charts/values.yaml values.yml
-                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-movie charts --values=values.yml --namespace dev
+                        # Deploy cast-service
+                        cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-cast charts --values=values.yml --namespace dev
                     '''
                 }
@@ -87,14 +91,15 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        rm -Rf .kube
-                        mkdir .kube
+                        rm -Rf .kube && mkdir .kube
                         cat $KUBECONFIG > .kube/config
                         cp charts/values.yaml values.yml
-                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-movie charts --values=values.yml --namespace qa
+                        cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-cast charts --values=values.yml --namespace qa
                     '''
                 }
@@ -108,14 +113,15 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        rm -Rf .kube
-                        mkdir .kube
+                        rm -Rf .kube && mkdir .kube
                         cat $KUBECONFIG > .kube/config
                         cp charts/values.yaml values.yml
-                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-movie charts --values=values.yml --namespace staging
+                        cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-cast charts --values=values.yml --namespace staging
                     '''
                 }
@@ -132,14 +138,15 @@ pipeline {
                 }
                 script {
                     sh '''
-                        rm -Rf .kube
-                        mkdir .kube
+                        rm -Rf .kube && mkdir .kube
                         cat $KUBECONFIG > .kube/config
                         cp charts/values.yaml values.yml
-                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-movie charts --values=values.yml --namespace prod
+                        cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
+                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
                         helm upgrade --install app-cast charts --values=values.yml --namespace prod
                     '''
                 }
