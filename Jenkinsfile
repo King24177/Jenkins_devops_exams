@@ -69,16 +69,16 @@ pipeline {
                     sh '''
                         rm -Rf .kube && mkdir .kube
                         cat $KUBECONFIG > .kube/config
-                        # Deploy movie-service
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-movie charts --values=values.yml --namespace dev
-                        # Deploy cast-service
+                        helm upgrade --install app-movie charts --values=values.yml \
+                          --set service.nodePort=30010 --namespace dev
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-cast charts --values=values.yml --namespace dev
+                        helm upgrade --install app-cast charts --values=values.yml \
+                          --set service.nodePort=30011 --namespace dev
                     '''
                 }
             }
@@ -96,11 +96,13 @@ pipeline {
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-movie charts --values=values.yml --namespace qa
+                        helm upgrade --install app-movie charts --values=values.yml \
+                          --set service.nodePort=30020 --namespace qa
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-cast charts --values=values.yml --namespace qa
+                        helm upgrade --install app-cast charts --values=values.yml \
+                          --set service.nodePort=30021 --namespace qa
                     '''
                 }
             }
@@ -118,11 +120,13 @@ pipeline {
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-movie charts --values=values.yml --namespace staging
+                        helm upgrade --install app-movie charts --values=values.yml \
+                          --set service.nodePort=30030 --namespace staging
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-cast charts --values=values.yml --namespace staging
+                        helm upgrade --install app-cast charts --values=values.yml \
+                          --set service.nodePort=30031 --namespace staging
                     '''
                 }
             }
@@ -143,11 +147,13 @@ pipeline {
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_MOVIE}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-movie charts --values=values.yml --namespace prod
+                        helm upgrade --install app-movie charts --values=values.yml \
+                          --set service.nodePort=30040 --namespace prod
                         cp charts/values.yaml values.yml
                         sed -i "s+repository:.*+repository: ${DOCKER_ID}/${DOCKER_CAST}+g" values.yml
                         sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        helm upgrade --install app-cast charts --values=values.yml --namespace prod
+                        helm upgrade --install app-cast charts --values=values.yml \
+                          --set service.nodePort=30041 --namespace prod
                     '''
                 }
             }
